@@ -1,0 +1,98 @@
+(No subject)
+H
+ 
+- Hersi
+Fri 2018-05-11 8:22 AM
+Inbox
+To:
+- Hersi (a_hersi25@hotmail.com);
+Evernote
+import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.util.Matrix;
+import org.apache.pdfbox.contentstream.operator.DrawObject;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.contentstream.operator.state.Concatenate;
+import org.apache.pdfbox.contentstream.operator.state.Restore;
+import org.apache.pdfbox.contentstream.operator.state.Save;
+import org.apache.pdfbox.contentstream.operator.state.SetGraphicsStateParameters;
+import org.apache.pdfbox.contentstream.operator.state.SetMatrix;
+import org.apache.pdfbox.contentstream.PDFStreamEngine;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import javax.imageio.ImageIO;
+
+/**
+ * This is an example on how to extract images from pdf.
+ */
+public class SaveImagesInPdf extends PDFStreamEngine{
+public int imageNumber = 1;
+
+public SaveImagesInPdf() throws IOException{
+addOperator(new Concatenate());
+addOperator(new DrawObject());
+addOperator(new SetGraphicsStateParameters());
+addOperator(new Save());
+addOperator(new Restore());
+addOperator(new SetMatrix());
+}
+public static void main( String[] args ) throws IOException{
+PDDocument document = null;
+String fileName = "C:\\Users\\user\\Downloads\\fd.pdf";
+try{
+document = PDDocument.load( new File(fileName) );
+SaveImagesInPdf printer = new SaveImagesInPdf();
+for(int i = 0; i < document.getNumberOfPages(); i++){
+System.out.println("-----------------------------------------------------");
+System.out.println("Page Number in Pdf:" + i + "   ");
+PDPage page = document.getPages().get(i);
+printer.processPage(page);
+}
+}catch(Exception e){}
+document.close();
+}
+
+
+@Override
+protected void processOperator( Operator operator, List<COSBase> operands) throws IOException{
+String operation = operator.getName();
+if( "Do".equals(operation) ){
+COSName objectName = (COSName) operands.get( 0 );
+PDXObject xobject = getResources().getXObject( objectName );
+if( xobject instanceof PDImageXObject){
+PDImageXObject image = (PDImageXObject)xobject;
+String destinationFilePath = "C:\\Users\\user\\Downloads\\OUTPUT" + imageNumber+".png";
+saveImageToComputer(destinationFilePath, image);
+imageNumber++;
+
+Matrix ctmNew = getGraphicsState().getCurrentTransformationMatrix();
+System.out.println("File: " + destinationFilePath);
+System.out.println("X-Coordinate: " + ctmNew.getTranslateX());
+System.out.println("Y-Coordinate: " + ctmNew.getTranslateY());
+
+}else if(xobject instanceof PDFormXObject){
+PDFormXObject form = (PDFormXObject)xobject;
+showForm(form);
+}
+}else{
+super.processOperator( operator, operands);
+}
+}
+public void saveImageToComputer(String destinationFilePath, PDImageXObject image){
+BufferedImage bImage = new BufferedImage(image.getWidth(),image.getHeight(),BufferedImage.TYPE_INT_ARGB);
+try{
+bImage = image.getImage();
+ImageIO.write(bImage,"PNG",new File(destinationFilePath));
+}catch(Exception e){}
+}
+
+}
